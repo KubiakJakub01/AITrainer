@@ -5,9 +5,13 @@ description = "Hub with various AI trainers"
 authors = ["KubiakJakub01 <kubiak.jakub01@gmail.com>"]
 readme = "README.md"
 
+[tool.poetry-exec-plugin.commands]
+ruff = "ruff check aitrainer"
+mypy = "mypy --ignore-missing-imports aitrainer"
+pylint = "pylint --rcfile pyproject.toml aitrainer"
+
 [tool.poetry.dependencies]
 python = "^3.10"
-
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.7.0"

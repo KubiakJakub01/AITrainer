@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "aitrainer"
+version = "0.1.0"
+description = "Hub with various AI trainers"
+authors = ["KubiakJakub01 <kubiak.jakub01@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.7.0"
+ruff = "^0.3.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

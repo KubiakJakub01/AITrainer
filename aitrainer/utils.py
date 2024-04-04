@@ -29,3 +29,8 @@ def log_warning(*args, **kwargs):
 def log_error(*args, **kwargs):
     """Log an error message."""
     logger.error(*args, **kwargs)
+
+
+def cycle(dl):
+    while True:
+        yield from dl

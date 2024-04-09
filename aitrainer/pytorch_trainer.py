@@ -43,3 +43,9 @@ class PyTorchTrainer:
             if self.step % self.hparams.valid_every == 0:
                 valid_stats = self.valid_fn(dl_iter)
                 self.valid_log_fn(self.step, valid_stats)
+
+    def _load_checkpoint():
+        pass
+
+    def _save_checkpoint():
+        pass

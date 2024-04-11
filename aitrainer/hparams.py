@@ -39,3 +39,12 @@ class Hparams:
         default=1000,
         metadata={'help': 'Number of steps between validation runs'},
     )
+
+    def __post_init__(self):
+        self.train_data_dir = Path(self.train_data_dir)
+        self.valid_data_dir = Path(self.valid_data_dir)
+        self.log_dir = Path(self.log_dir)
+        self.checkpoint_dir = Path(self.checkpoint_dir)
+
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)

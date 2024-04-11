@@ -3,10 +3,17 @@ import logging
 
 import coloredlogs
 
+from .ddp import global_rank, local_rank
+
 # Set up logging
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
-handler.setFormatter(coloredlogs.ColoredFormatter('%(asctime)s %(levelname)s %(message)s'))
+handler.setFormatter(
+    coloredlogs.ColoredFormatter(
+        fmt=f'%(asctime)s :: %(levelname)s :: GR={global_rank()};LR={local_rank()} :: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+)
 handler.setLevel(logging.INFO)
 logger.addHandler(handler)
 

@@ -42,7 +42,8 @@ disable = ["missing-docstring",
             "consider-using-from-import",
             "relative-beyond-top-level",
             "too-many-ancestors",
-            "duplicate-code"]
+            "duplicate-code",
+            "too-few-public-methods"]
 fail-under = 10.0
 generated-members=["numpy.*","torch.*"]
 

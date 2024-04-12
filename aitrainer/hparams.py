@@ -27,6 +27,10 @@ class Hparams:
     )
 
     # Training
+    total_steps: int = field(
+        default=100000,
+        metadata={'help': 'Total number of steps to train for'},
+    )
     base_checkpoint: int | None = field(
         default=None,
         metadata={'help': 'Path to base checkpoint. If None, start from scratch'},

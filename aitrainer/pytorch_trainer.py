@@ -6,8 +6,9 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from .ddp import global_rank
+from .ddp import global_leader_only, global_rank
 from .hparams import Hparams
+from .protocols import TrainStepFnProtocol, ValidFnProtocol
 from .utils import cycle, log_info
 
 
@@ -18,15 +19,16 @@ class PyTorchTrainer:
         self,
         hparams: Hparams,
         model: nn.Module,
-        device: torch.device,
-        train_step_fn: Callable,
-        valid_fn: Callable,
+        train_step_fn: TrainStepFnProtocol,
+        valid_fn: ValidFnProtocol,
         train_log_fn: Callable,
         valid_log_fn: Callable,
     ):
         self.hparams = hparams
         self.model = model
-        self.device = device
+        self.device = (
+            torch.cuda.current_device() if torch.cuda.is_available() else torch.device('cpu')
+        )
         self.train_step_fn = train_step_fn
         self.valid_fn = valid_fn
         self.train_log_fn = train_log_fn
@@ -45,23 +47,46 @@ class PyTorchTrainer:
         else:
             log_info('Starting from scratch')
 
-    def train(self, dataloader: DataLoader):
+    def train(self, train_dl: DataLoader, valid_dl: DataLoader):
         """Train the model"""
-        dl_iter = cycle(dataloader)
+        dl_iter = cycle(train_dl)
         self.model.to(self.device)
         self.model.train()
 
         while True:
-            self.step += 1
-            loss = self.train_step_fn(self.model, dl_iter)
-            self.train_log_fn(self.step, loss)
+            if self.step > self.hparams.total_steps:
+                self._save_checkpoint()
+                self.validation(valid_dl)
+
+            stats = self.train_step_fn(
+                model=self.model,
+                dl_iter=dl_iter,
+                device=self.device,
+                hparams=self.hparams,
+                step=self.step,
+            )
+            self.train_log_fn(self.step, stats)
 
             if self.step % self.hparams.steps_per_ckpt == 0:
-                valid_stats = self.valid_fn(dl_iter)
-                self.valid_log_fn(self.step, valid_stats)
+                self._save_checkpoint()
+                self.validation(valid_dl)
 
-    def validation(self):
-        pass
+            self.step += 1
+
+    @global_leader_only
+    def validation(self, valid_dl: DataLoader):
+        """Run validation"""
+        self.model.eval()
+        output_batch, valid_stats = self.valid_fn(
+            model=self.model,
+            dl=valid_dl,
+            device=self.device,
+            hparams=self.hparams,
+            step=self.step,
+        )
+        self.valid_log_fn(self.step, valid_stats, output_batch)
+
+        self.model.train()
 
     def _load_checkpoint(self):
         """Load a checkpoint from base_checkpoint"""

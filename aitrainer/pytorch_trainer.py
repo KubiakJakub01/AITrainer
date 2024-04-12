@@ -64,6 +64,7 @@ class PyTorchTrainer:
         pass
 
     def _load_checkpoint(self):
+        """Load a checkpoint from base_checkpoint"""
         if not self.hparams.base_checkpoint:
             log_info('No checkpoint to load')
             return
@@ -71,4 +72,7 @@ class PyTorchTrainer:
         self.model.load_state_dict(torch.load(self.hparams.base_checkpoint, map_location='cpu'))
 
     def _save_checkpoint(self):
-        pass
+        """Save a checkpoint"""
+        checkpoint_path = self.hparams.checkpoint_dir / f'{self.step}.pt'
+        torch.save(self.model.state_dict(), checkpoint_path)
+        log_info('Saved checkpoint to %s', checkpoint_path.as_posix())

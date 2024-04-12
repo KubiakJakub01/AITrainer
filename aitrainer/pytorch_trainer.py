@@ -2,14 +2,15 @@
 from collections.abc import Callable
 
 import torch
+import torch.distributed
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from .ddp import global_leader_only, global_rank
+from .ddp import global_leader_only, is_global_leader
 from .hparams import Hparams
 from .protocols import TrainStepFnProtocol, ValidFnProtocol
-from .utils import cycle, log_info
+from .utils import log_info
 
 
 class PyTorchTrainer:
@@ -34,7 +35,7 @@ class PyTorchTrainer:
         self.train_log_fn = train_log_fn
         self.valid_log_fn = valid_log_fn
 
-        if global_rank():
+        if is_global_leader():
             self.writer = SummaryWriter(log_dir=self.hparams.log_dir)
 
         self.step = 1
@@ -49,7 +50,7 @@ class PyTorchTrainer:
 
     def train(self, train_dl: DataLoader, valid_dl: DataLoader):
         """Train the model"""
-        dl_iter = cycle(train_dl)
+        dl_iter = self._cycle(train_dl)
         self.model.to(self.device)
         self.model.train()
 
@@ -101,3 +102,10 @@ class PyTorchTrainer:
         checkpoint_path = self.hparams.checkpoint_dir / f'{self.step}.pt'
         torch.save(self.model.state_dict(), checkpoint_path)
         log_info('Saved checkpoint to %s', checkpoint_path.as_posix())
+
+    def _cycle(self, dl):
+        while True:
+            yield from dl
+            self.epoch += 1
+            if is_global_leader():
+                log_info('New epoch: %d', self.epoch)

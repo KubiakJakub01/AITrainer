@@ -79,7 +79,8 @@ class PyTorchTrainer:
                 hparams=self.hparams,
                 step=self.step,
             )
-            self.train_log_fn(self.step, stats)
+            if is_global_leader():
+                self.train_log_fn(self.writer, self.step, stats)
 
             if self.step % self.hparams.steps_per_ckpt == 0:
                 self._save_checkpoint()
@@ -100,7 +101,7 @@ class PyTorchTrainer:
             hparams=self.hparams,
             step=self.step,
         )
-        self.valid_log_fn(self.step, valid_stats, output_batch)
+        self.valid_log_fn(self.writer, self.step, valid_stats, output_batch)
 
         for model in self.model_dict.values():
             model.train()

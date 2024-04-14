@@ -4,6 +4,7 @@ from typing import Any, Protocol
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from .hparams import Hparams
 
@@ -29,4 +30,16 @@ class ValidFnProtocol(Protocol):
         hparams: Hparams,
         step: int,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
+        ...
+
+
+class LogFnProtocol(Protocol):
+    def __call__(
+        self,
+        hparams: Hparams,
+        writer: SummaryWriter,
+        step: int,
+        stats: dict[str, Any],
+        output_batch: dict[str, Any] | None = None,
+    ):
         ...

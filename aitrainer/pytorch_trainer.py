@@ -1,5 +1,4 @@
 """Module with PyTorchTrainer class"""
-from collections.abc import Callable
 
 import deepspeed
 import torch
@@ -10,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .ddp import global_leader_only, is_global_leader
 from .hparams import Hparams
-from .protocols import TrainStepFnProtocol, ValidFnProtocol
+from .protocols import LogFnProtocol, TrainStepFnProtocol, ValidFnProtocol
 from .utils import log_info
 
 
@@ -23,8 +22,8 @@ class PyTorchTrainer:
         model_dict: dict[str, nn.Module],
         train_step_fn: TrainStepFnProtocol,
         valid_fn: ValidFnProtocol,
-        train_log_fn: Callable,
-        valid_log_fn: Callable,
+        train_log_fn: LogFnProtocol,
+        valid_log_fn: LogFnProtocol,
     ):
         """Initialize the trainer
 
@@ -82,7 +81,9 @@ class PyTorchTrainer:
                 step=self.step,
             )
             if is_global_leader():
-                self.train_log_fn(self.writer, self.step, stats)
+                self.train_log_fn(
+                    writer=self.writer, step=self.step, stats=stats, hparams=self.hparams
+                )
 
             if self.step % self.hparams.steps_per_ckpt == 0:
                 self._save_checkpoint()
@@ -103,7 +104,13 @@ class PyTorchTrainer:
             hparams=self.hparams,
             step=self.step,
         )
-        self.valid_log_fn(self.writer, self.step, valid_stats, output_batch)
+        self.valid_log_fn(
+            writer=self.writer,
+            step=self.step,
+            stats=valid_stats,
+            output_batch=output_batch,
+            hparams=self.hparams,
+        )
 
         for model in self.engine_dict.values():
             model.train()

@@ -1,4 +1,10 @@
+from collections.abc import Iterator
+
+from deepspeed import DeepSpeedEngine
 from torch import nn
+
+from aitrainer.hparams import Hparams
+from aitrainer.utils import to_device
 
 
 class MLP(nn.Module):
@@ -32,3 +38,25 @@ class MLP(nn.Module):
     def forward(self, x):
         x = self.net(x)
         return x
+
+
+def train_step_fn(  # pylint: disable=unused-argument
+    engine_dict: dict[str, DeepSpeedEngine],
+    dl_iter: Iterator,
+    hparams: Hparams,
+    step: int,
+) -> tuple[float, dict]:
+    """Train step function for the MLP model"""
+    model = engine_dict['model']
+    batch = to_device(next(dl_iter), model.device)
+
+    # Forward pass
+    loss = model(batch['inputs'])
+
+    # Backward pass
+    model.backward(loss)
+
+    # Weight update
+    model.step()
+
+    return loss.item(), {}

@@ -19,14 +19,14 @@ class PyTorchTrainer:
     def __init__(
         self,
         hparams: Hparams,
-        model: nn.Module,
+        model_dict: dict[str, nn.Module],
         train_step_fn: TrainStepFnProtocol,
         valid_fn: ValidFnProtocol,
         train_log_fn: Callable,
         valid_log_fn: Callable,
     ):
         self.hparams = hparams
-        self.model = model
+        self.model_dict = model_dict
         self.device = (
             torch.cuda.current_device() if torch.cuda.is_available() else torch.device('cpu')
         )
@@ -51,16 +51,20 @@ class PyTorchTrainer:
     def train(self, train_dl: DataLoader, valid_dl: DataLoader):
         """Train the model"""
         dl_iter = self._cycle(train_dl)
-        self.model.to(self.device)
-        self.model.train()
+
+        for model in self.model_dict.values():
+            model.to(self.device)
+            model.train()
 
         while True:
             if self.step > self.hparams.total_steps:
+                log_info('Training complete')
                 self._save_checkpoint()
                 self.validation(valid_dl)
+                break
 
             stats = self.train_step_fn(
-                model=self.model,
+                model_dict=self.model_dict,
                 dl_iter=dl_iter,
                 device=self.device,
                 hparams=self.hparams,
@@ -77,9 +81,11 @@ class PyTorchTrainer:
     @global_leader_only
     def validation(self, valid_dl: DataLoader):
         """Run validation"""
-        self.model.eval()
+        for model in self.model_dict.values():
+            model.eval()
+
         output_batch, valid_stats = self.valid_fn(
-            model=self.model,
+            model_dict=self.model_dict,
             dl=valid_dl,
             device=self.device,
             hparams=self.hparams,
@@ -87,7 +93,8 @@ class PyTorchTrainer:
         )
         self.valid_log_fn(self.step, valid_stats, output_batch)
 
-        self.model.train()
+        for model in self.model_dict.values():
+            model.train()
 
     def _load_checkpoint(self):
         """Load a checkpoint from base_checkpoint"""
@@ -95,12 +102,14 @@ class PyTorchTrainer:
             log_info('No checkpoint to load')
             return
 
-        self.model.load_state_dict(torch.load(self.hparams.base_checkpoint, map_location='cpu'))
+        self.model_dict.load_state_dict(
+            torch.load(self.hparams.base_checkpoint, map_location='cpu')
+        )
 
     def _save_checkpoint(self):
         """Save a checkpoint"""
         checkpoint_path = self.hparams.checkpoint_dir / f'{self.step}.pt'
-        torch.save(self.model.state_dict(), checkpoint_path)
+        torch.save(self.model_dict.state_dict(), checkpoint_path)
         log_info('Saved checkpoint to %s', checkpoint_path.as_posix())
 
     def _cycle(self, dl):

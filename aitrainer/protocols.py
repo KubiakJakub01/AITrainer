@@ -11,7 +11,7 @@ from .hparams import Hparams
 class TrainStepFnProtocol(Protocol):
     def __call__(
         self,
-        model_dict: dict[str, nn.Module],
+        engine_dict: dict[str, nn.Module],
         dl_iter: Iterator,
         device: torch.device,
         hparams: Hparams,
@@ -23,7 +23,7 @@ class TrainStepFnProtocol(Protocol):
 class ValidFnProtocol(Protocol):
     def __call__(
         self,
-        model_dict: dict[str, nn.Module],
+        engine_dict: dict[str, nn.Module],
         dl: DataLoader,
         device: torch.device,
         hparams: Hparams,

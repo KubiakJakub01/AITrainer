@@ -25,6 +25,10 @@ class Hparams:
         default=4,
         metadata={'help': 'Number of workers for data loader'},
     )
+    batch_size: int = field(
+        default=4,
+        metadata={'help': 'Batch size'},
+    )
 
     # Training
     total_steps: int = field(
@@ -43,6 +47,14 @@ class Hparams:
         default=1000,
         metadata={'help': 'Number of steps between validation runs'},
     )
+    gradient_accumulation_steps: int = field(
+        default=1,
+        metadata={'help': 'Number of steps to accumulate gradients over'},
+    )
+    gradient_clipping: float = field(
+        default=1.0,
+        metadata={'help': 'Gradient clipping value'},
+    )
 
     def __post_init__(self):
         self.train_data_dir = Path(self.train_data_dir)
@@ -52,3 +64,7 @@ class Hparams:
 
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def deepspeed_config(self):
+        return {}

@@ -1,6 +1,7 @@
 """Module with PyTorchTrainer class"""
 from collections.abc import Callable
 
+import deepspeed
 import torch
 import torch.distributed
 import torch.nn as nn
@@ -35,7 +36,6 @@ class PyTorchTrainer:
             train_log_fn: Function to log training stats
             valid_log_fn: Function to log validation stats"""
         self.hparams = hparams
-        self.model_dict = model_dict
         self.device = (
             torch.cuda.current_device() if torch.cuda.is_available() else torch.device('cpu')
         )
@@ -50,6 +50,8 @@ class PyTorchTrainer:
         self.step = 1
         self.epoch = 1
 
+        self.engine_dict = self._init_engines(model_dict)
+
         if self.hparams.base_checkpoint:
             log_info('Loading checkpoint from %d', self.hparams.base_checkpoint)
             self.step = self.hparams.base_checkpoint
@@ -61,7 +63,7 @@ class PyTorchTrainer:
         """Train the model"""
         dl_iter = self._cycle(train_dl)
 
-        for model in self.model_dict.values():
+        for model in self.engine_dict.values():
             model.to(self.device)
             model.train()
 
@@ -73,7 +75,7 @@ class PyTorchTrainer:
                 break
 
             stats = self.train_step_fn(
-                model_dict=self.model_dict,
+                engine_dict=self.engine_dict,
                 dl_iter=dl_iter,
                 device=self.device,
                 hparams=self.hparams,
@@ -91,11 +93,11 @@ class PyTorchTrainer:
     @global_leader_only
     def validation(self, valid_dl: DataLoader):
         """Run validation"""
-        for model in self.model_dict.values():
+        for model in self.engine_dict.values():
             model.eval()
 
         output_batch, valid_stats = self.valid_fn(
-            model_dict=self.model_dict,
+            engine_dict=self.engine_dict,
             dl=valid_dl,
             device=self.device,
             hparams=self.hparams,
@@ -103,8 +105,21 @@ class PyTorchTrainer:
         )
         self.valid_log_fn(self.writer, self.step, valid_stats, output_batch)
 
-        for model in self.model_dict.values():
+        for model in self.engine_dict.values():
             model.train()
+
+    def _init_engines(
+        self, model_dict: dict[str, nn.Module]
+    ) -> dict[str, deepspeed.DeepSpeedEngine]:
+        """Initialize DeepSpeed engines from pytorch models"""
+        engine_dict = {}
+        for model_name, model in model_dict.items():
+            engine_dict[model_name], *_ = deepspeed.initialize(
+                model=model,
+                model_parameters=model.parameters(),
+                config_params=self.hparams.deepspeed_config,
+            )
+        return engine_dict
 
     def _load_checkpoint(self):
         """Load a checkpoint from base_checkpoint"""
@@ -112,15 +127,13 @@ class PyTorchTrainer:
             log_info('No checkpoint to load')
             return
 
-        self.model_dict.load_state_dict(
-            torch.load(self.hparams.base_checkpoint, map_location='cpu')
-        )
+        for engine in self.engine_dict.values():
+            engine.load_checkpoint(self.hparams.checkpoint_dir, tag=self.hparams.base_checkpoint)
 
     def _save_checkpoint(self):
         """Save a checkpoint"""
-        checkpoint_path = self.hparams.checkpoint_dir / f'{self.step}.pt'
-        torch.save(self.model_dict.state_dict(), checkpoint_path)
-        log_info('Saved checkpoint to %s', checkpoint_path.as_posix())
+        for engine in self.engine_dict.values():
+            engine.save_checkpoint(self.hparams.checkpoint_dir, tag=self.step)
 
     def _cycle(self, dl):
         while True:

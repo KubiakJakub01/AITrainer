@@ -1,7 +1,6 @@
 from collections.abc import Iterator
 from typing import Any, Protocol
 
-import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -14,7 +13,6 @@ class TrainStepFnProtocol(Protocol):
         self,
         engine_dict: dict[str, nn.Module],
         dl_iter: Iterator,
-        device: torch.device,
         hparams: Hparams,
         step: int,
     ) -> dict[str, Any]:
@@ -26,7 +24,6 @@ class ValidFnProtocol(Protocol):
         self,
         engine_dict: dict[str, nn.Module],
         dl: DataLoader,
-        device: torch.device,
         hparams: Hparams,
         step: int,
     ) -> tuple[dict[str, Any], dict[str, Any]]:

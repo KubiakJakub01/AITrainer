@@ -76,7 +76,6 @@ class PyTorchTrainer:
             stats = self.train_step_fn(
                 engine_dict=self.engine_dict,
                 dl_iter=dl_iter,
-                device=self.device,
                 hparams=self.hparams,
                 step=self.step,
             )
@@ -100,7 +99,6 @@ class PyTorchTrainer:
         output_batch, valid_stats = self.valid_fn(
             engine_dict=self.engine_dict,
             dl=valid_dl,
-            device=self.device,
             hparams=self.hparams,
             step=self.step,
         )

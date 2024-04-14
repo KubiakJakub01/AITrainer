@@ -25,6 +25,15 @@ class PyTorchTrainer:
         train_log_fn: Callable,
         valid_log_fn: Callable,
     ):
+        """Initialize the trainer
+
+        Args:
+            hparams: Hyperparameters for the training run
+            model_dict: Dictionary of models to train
+            train_step_fn: Function to run a training step
+            valid_fn: Function to run validation
+            train_log_fn: Function to log training stats
+            valid_log_fn: Function to log validation stats"""
         self.hparams = hparams
         self.model_dict = model_dict
         self.device = (

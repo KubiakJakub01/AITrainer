@@ -1,10 +1,12 @@
 from collections.abc import Iterator
+from typing import Any
 
 from deepspeed import DeepSpeedEngine
 from torch import nn
+from torch.utils.tensorboard import SummaryWriter
 
 from aitrainer.hparams import Hparams
-from aitrainer.utils import to_device
+from aitrainer.utils import log_info, to_device
 
 
 class MLP(nn.Module):
@@ -60,3 +62,36 @@ def train_step_fn(  # pylint: disable=unused-argument
     model.step()
 
     return loss.item(), {}
+
+
+def valid_fn(  # pylint: disable=unused-argument
+    engine_dict: dict[str, DeepSpeedEngine],
+    dl: Iterator,
+    hparams: Hparams,
+    step: int,
+) -> tuple[dict, dict]:
+    """Validation function for the MLP model"""
+    model = engine_dict['model']
+    batch = to_device(next(dl), model.device)
+
+    # Forward pass
+    output = model(batch['inputs'])
+
+    return batch, {'output': output}
+
+
+def log_fn(  # pylint: disable=unused-argument
+    hparams: Hparams,
+    writer: SummaryWriter,
+    step: int,
+    stats: dict,
+    output_batch: dict[str, Any] | None = None,
+):
+    """Log function for the MLP model"""
+    log_info('Step: %d, Loss: %.4f', step, stats['loss'])
+    if hparams.log_every and step % hparams.log_every == 0:
+        writer.add_scalar('Loss', stats['loss'], step)
+        if output_batch:
+            writer.add_histogram('Output', output_batch['output'], step)
+            writer.add_histogram('Target', output_batch['inputs'], step)
+            writer.add_histogram('Error', output_batch['output'] - output_batch['inputs'], step)

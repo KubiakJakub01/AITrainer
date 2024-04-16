@@ -35,10 +35,6 @@ class Hparams:
         default=100000,
         metadata={'help': 'Total number of steps to train for'},
     )
-    log_every: int = field(
-        default=100,
-        metadata={'help': 'Number of steps between logs'},
-    )
     base_checkpoint: int | None = field(
         default=None,
         metadata={'help': 'Path to base checkpoint. If None, start from scratch'},

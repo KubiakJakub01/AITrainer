@@ -89,7 +89,7 @@ def log_fn(  # pylint: disable=unused-argument
 ):
     """Log function for the MLP model"""
     log_info('Step: %d, Loss: %.4f', step, stats['loss'])
-    if hparams.log_every and step % hparams.log_every == 0:
+    if hparams.steps_per_log and step % hparams.steps_per_log == 0:
         writer.add_scalar('Loss', stats['loss'], step)
         if output_batch:
             writer.add_histogram('Output', output_batch['output'], step)

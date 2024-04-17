@@ -95,3 +95,19 @@ def log_fn(  # pylint: disable=unused-argument
             writer.add_histogram('Output', output_batch['output'], step)
             writer.add_histogram('Target', output_batch['inputs'], step)
             writer.add_histogram('Error', output_batch['output'] - output_batch['inputs'], step)
+
+
+def log_valid_fn(  # pylint: disable=unused-argument
+    hparams: Hparams,
+    writer: SummaryWriter,
+    step: int,
+    stats: dict,
+    output_batch: dict[str, Any] | None = None,
+):
+    """Log function for the MLP model validation"""
+    log_info('Validation: Loss: %.4f', stats['loss'])
+    writer.add_scalar('Validation Loss', stats['loss'], step)
+    if output_batch:
+        writer.add_histogram('Output', output_batch['output'], step)
+        writer.add_histogram('Target', output_batch['inputs'], step)
+        writer.add_histogram('Error', output_batch['output'] - output_batch['inputs'], step)

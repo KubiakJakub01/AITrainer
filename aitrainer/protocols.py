@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from typing import Any, Protocol
 
-import torch.nn as nn
+from deepspeed import DeepSpeedEngine
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -11,7 +11,7 @@ from .hparams import Hparams
 class TrainStepFnProtocol(Protocol):
     def __call__(
         self,
-        engine_dict: dict[str, nn.Module],
+        engine_dict: dict[str, DeepSpeedEngine],
         dl_iter: Iterator,
         hparams: Hparams,
         step: int,
@@ -22,7 +22,7 @@ class TrainStepFnProtocol(Protocol):
 class ValidFnProtocol(Protocol):
     def __call__(
         self,
-        engine_dict: dict[str, nn.Module],
+        engine_dict: dict[str, DeepSpeedEngine],
         dl: DataLoader,
         hparams: Hparams,
         step: int,

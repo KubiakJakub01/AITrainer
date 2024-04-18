@@ -1,7 +1,9 @@
 """Utility functions for the project."""
 import logging
+from collections.abc import Callable
 
 import coloredlogs
+import torch
 
 from .ddp import global_rank, local_rank
 
@@ -36,3 +38,19 @@ def log_warning(*args, **kwargs):
 def log_error(*args, **kwargs):
     """Log an error message."""
     logger.error(*args, **kwargs)
+
+
+def tree_map(fn: Callable, x):
+    if isinstance(x, list):
+        x = [tree_map(fn, xi) for xi in x]
+    elif isinstance(x, tuple):
+        x = (tree_map(fn, xi) for xi in x)
+    elif isinstance(x, dict):
+        x = {k: tree_map(fn, v) for k, v in x.items()}
+    elif isinstance(x, torch.Tensor):
+        x = fn(x)
+    return x
+
+
+def to_device(x: dict, device: torch.device):
+    return tree_map(lambda t: t.to(device), x)

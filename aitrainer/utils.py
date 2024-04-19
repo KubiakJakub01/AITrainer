@@ -1,6 +1,9 @@
 """Utility functions for the project."""
+import json
 import logging
 from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 import coloredlogs
 import torch
@@ -54,3 +57,14 @@ def tree_map(fn: Callable, x):
 
 def to_device(x: dict, device: torch.device):
     return tree_map(lambda t: t.to(device), x)
+
+
+def load_config(path: Path) -> dict[str, Any]:
+    """Load hparams from a file"""
+    with open(path, encoding='utf-8') as f:
+        if path.suffix == '.json':
+            hparams_dict = json.load(f)
+        else:
+            raise ValueError(f'Unknown file extension: {path.suffix}')
+
+    return hparams_dict

@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from typing import Any
 
+import torch
 from deepspeed import DeepSpeedEngine
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
@@ -58,10 +59,13 @@ def train_step_fn(  # pylint: disable=unused-argument
     # Backward pass
     model.backward(loss)
 
+    # Gradient clipping
+    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), hparams.gradient_clipping)
+
     # Weight update
     model.step()
 
-    return loss.item(), {}
+    return loss.item(), {'grad_norm': grad_norm}
 
 
 def valid_fn(  # pylint: disable=unused-argument
@@ -91,10 +95,7 @@ def log_fn(  # pylint: disable=unused-argument
     log_info('Step: %d, Loss: %.4f', step, stats['loss'])
     if hparams.steps_per_log and step % hparams.steps_per_log == 0:
         writer.add_scalar('Loss', stats['loss'], step)
-        if output_batch:
-            writer.add_histogram('Output', output_batch['output'], step)
-            writer.add_histogram('Target', output_batch['inputs'], step)
-            writer.add_histogram('Error', output_batch['output'] - output_batch['inputs'], step)
+        writer.add_scalar('Gradient Norm', stats['grad_norm'], step)
 
 
 def log_valid_fn(  # pylint: disable=unused-argument

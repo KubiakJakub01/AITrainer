@@ -2,6 +2,17 @@ import os
 from collections.abc import Callable
 from functools import wraps
 
+import deepspeed
+
+
+def init_distritubed():
+    deepspeed.init_distributed(
+        dist_backend='nccl',
+        init_method='env://',
+        rank=local_rank(),
+        world_size=get_world_size(),
+    )
+
 
 def get_world_size():
     return int(os.environ.get('WORLD_SIZE', 1))

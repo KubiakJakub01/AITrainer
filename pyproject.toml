@@ -17,6 +17,7 @@ deepspeed = "^0.14.0"
 torch = { version = "2.2.1+cu121", source = "torch" }
 torchaudio = { version = "2.2.1+cu121", source = "torch" }
 torchvision = { version = "0.17.1+cu121", source = "torch" }
+tensorboard = "^2.16.2"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.7.0"

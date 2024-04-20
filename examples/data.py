@@ -4,8 +4,8 @@ from torchvision.datasets import MNIST
 from torchvision.transforms import Compose, Normalize, ToTensor
 
 
-def get_mnist_data_loader(batch_size: int) -> DataLoader:
+def get_mnist_data_loader(batch_size: int, is_train: bool) -> DataLoader:
     """Get MNIST data loader."""
     transform = Compose([ToTensor(), Normalize((0.1307,), (0.3081,))])
-    mnist = MNIST(root='data', train=True, download=True, transform=transform)
+    mnist = MNIST(root='data', train=is_train, download=True, transform=transform)
     return DataLoader(mnist, batch_size=batch_size, shuffle=True)

@@ -1,0 +1,6 @@
+{
+    "batch_size": 64,
+    "steps_per_log": 10,
+    "steps_per_ckpt": 100,
+    "total_steps": 1000
+}

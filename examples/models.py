@@ -33,7 +33,6 @@ class MLP(nn.Module):
             nn.Dropout(self.hparams.dropout),
             nn.ReLU(),
             nn.Linear(self.hparams.hidden_dim, self.hparams.output_dim),
-            self.hparams.std,
         )
 
     def forward(self, x):

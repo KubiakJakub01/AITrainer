@@ -1,3 +1,10 @@
+# Project specific
+**/debug/*
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

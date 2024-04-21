@@ -1,40 +1,38 @@
 from collections.abc import Iterator
 from typing import Any
 
+import torch
 from deepspeed import DeepSpeedEngine
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
-from aitrainer.hparams import Hparams
-from aitrainer.utils import log_info, to_device
+from aitrainer import log_info, to_device
+
+from .hparams import MLPHparams
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, dropout, std):
+    def __init__(self, hparams: MLPHparams):
         """Multi-layer perceptron.
 
         Args:
-            input_dim: Dimensionality of the input.
-            hidden_dim: Dimensionality of the hidden layers.
-            output_dim: Dimensionality of the output.
-            dropout: Dropout probability.
-            std: Standard deviation of the weights.
+            hparams: Hyperparameters for the MLP model.
 
         Returns:
             Initialized MLP."""
         super().__init__()
+        self.hparams = hparams
         self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.Dropout(dropout),
+            nn.Linear(self.hparams.input_dim, self.hparams.hidden_dim),
+            nn.Dropout(self.hparams.dropout),
             nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim * 2),
-            nn.Dropout(dropout),
+            nn.Linear(self.hparams.hidden_dim, self.hparams.hidden_dim * 2),
+            nn.Dropout(self.hparams.dropout),
             nn.ReLU(),
-            nn.Linear(hidden_dim * 2, hidden_dim),
-            nn.Dropout(dropout),
+            nn.Linear(self.hparams.hidden_dim * 2, self.hparams.hidden_dim),
+            nn.Dropout(self.hparams.dropout),
             nn.ReLU(),
-            nn.Linear(hidden_dim, output_dim),
-            std,
+            nn.Linear(self.hparams.hidden_dim, self.hparams.output_dim),
         )
 
     def forward(self, x):
@@ -45,7 +43,7 @@ class MLP(nn.Module):
 def train_step_fn(  # pylint: disable=unused-argument
     engine_dict: dict[str, DeepSpeedEngine],
     dl_iter: Iterator,
-    hparams: Hparams,
+    hparams: MLPHparams,
     step: int,
 ) -> tuple[float, dict]:
     """Train step function for the MLP model"""
@@ -58,16 +56,19 @@ def train_step_fn(  # pylint: disable=unused-argument
     # Backward pass
     model.backward(loss)
 
+    # Gradient clipping
+    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), hparams.gradient_clipping)
+
     # Weight update
     model.step()
 
-    return loss.item(), {}
+    return loss.item(), {'grad_norm': grad_norm}
 
 
 def valid_fn(  # pylint: disable=unused-argument
     engine_dict: dict[str, DeepSpeedEngine],
     dl: Iterator,
-    hparams: Hparams,
+    hparams: MLPHparams,
     step: int,
 ) -> tuple[dict, dict]:
     """Validation function for the MLP model"""
@@ -81,7 +82,7 @@ def valid_fn(  # pylint: disable=unused-argument
 
 
 def log_fn(  # pylint: disable=unused-argument
-    hparams: Hparams,
+    hparams: MLPHparams,
     writer: SummaryWriter,
     step: int,
     stats: dict,
@@ -91,14 +92,11 @@ def log_fn(  # pylint: disable=unused-argument
     log_info('Step: %d, Loss: %.4f', step, stats['loss'])
     if hparams.steps_per_log and step % hparams.steps_per_log == 0:
         writer.add_scalar('Loss', stats['loss'], step)
-        if output_batch:
-            writer.add_histogram('Output', output_batch['output'], step)
-            writer.add_histogram('Target', output_batch['inputs'], step)
-            writer.add_histogram('Error', output_batch['output'] - output_batch['inputs'], step)
+        writer.add_scalar('Gradient Norm', stats['grad_norm'], step)
 
 
 def log_valid_fn(  # pylint: disable=unused-argument
-    hparams: Hparams,
+    hparams: MLPHparams,
     writer: SummaryWriter,
     step: int,
     stats: dict,

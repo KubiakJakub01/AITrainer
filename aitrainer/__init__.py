@@ -1,11 +1,11 @@
 from .ddp import init_distritubed
 from .hparams import Hparams
-from .pytorch_trainer import Trainer
+from .pytorch_trainer import DeepspeedTrainer
 from .utils import load_config, log_debug, log_error, log_info, log_warning, to_device
 
 __all__ = [
+    'DeepspeedTrainer',
     'Hparams',
-    'Trainer',
     'init_distritubed',
     'load_config',
     'log_debug',

@@ -13,7 +13,7 @@ from .protocols import LogFnProtocol, TrainStepFnProtocol, ValidFnProtocol
 from .utils import log_info
 
 
-class DeepspeedTrainer:
+class Trainer:
     """Class for training PyTorch models"""
 
     def __init__(
